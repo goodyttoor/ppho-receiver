@@ -3,6 +3,7 @@ import os
 from dotenv import load_dotenv
 from sqlmodel import create_engine, SQLModel, Session
 
+# Load database config from .env file
 load_dotenv()
 
 db_url = os.environ.get('DATABASE_URL')
@@ -11,6 +12,7 @@ db_name = os.environ.get('DATABASE_NAME')
 db_user = os.environ.get('DATABASE_USER')
 db_pass = os.environ.get('DATABASE_PASS')
 
+# Create database engine
 engine = create_engine('mysql://{db_user}:{db_pass}@{db_url}:{db_port}/{db_name}'.format(
     db_url=db_url,
     db_port=db_port,
@@ -24,6 +26,7 @@ def init_db():
     SQLModel.metadata.create_all(engine)
 
 
+# Create database session
 def get_session():
     with Session(engine) as session:
         yield session

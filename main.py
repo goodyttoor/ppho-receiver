@@ -5,8 +5,10 @@ from starlette.responses import RedirectResponse
 from db import get_session, init_db
 from model import ReceiveData, Person, DxOpd, DxIpd, OperationOpd, OperationIpd, Service, Admission
 
+# List of allowed IP addresses
 allow_ips = ['127.0.0.1', '192.168.1.1']
 
+# Map table name from input to database
 table_map = {
     'cmu_dent_person': 'person',
     'cmu_dent_dx_opd': 'dx_opd',
@@ -17,6 +19,7 @@ table_map = {
     'cmu_dent_admission': 'admission',
 }
 
+# Create FastAPI instance
 app = FastAPI(
     title='PPHO Data Receiver',
     version='1.0.0'
@@ -40,13 +43,15 @@ async def receive(input_obj: ReceiveData, session: Session = Depends(get_session
     # Get input table name
     table_name = table_map[input_obj.table_name]
 
+    # Counters for output message
     count_new = 0
     count_update = 0
 
+    # Loop through input data array
     for data in input_obj.data:
         new_obj = Person.parse_obj(data)
 
-        # Get existed person
+        # Check if row existed
         statement = None
         if table_name == 'person':
             statement = select(Person).where(Person.hcode == new_obj.hcode).where(Person.cid == new_obj.cid)
@@ -69,6 +74,7 @@ async def receive(input_obj: ReceiveData, session: Session = Depends(get_session
             statement = select(Admission).where(Admission.hcode == new_obj.hcode).where(
                 Admission.cid == new_obj.cid).where(Admission.datesev == new_obj.datesev)
 
+        # Get old object
         old_obj = session.exec(statement).one_or_none()
 
         if old_obj is None:
@@ -89,8 +95,8 @@ async def receive(input_obj: ReceiveData, session: Session = Depends(get_session
     return {'message': 'Success: {} added, {} updated'.format(count_new, count_update)}
 
 
-# Redirect root to docs
 # TODO: Remove docs in production
+# Redirect root to docs
 @app.get('/', include_in_schema=False)
 async def docs_redirect():
     return RedirectResponse(url='/docs')

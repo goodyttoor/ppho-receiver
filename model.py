@@ -5,11 +5,13 @@ from pydantic import BaseModel
 from sqlmodel import Field, SQLModel
 
 
+# Base model for data receiver
 class ReceiveData(BaseModel):
     table_name: str
     data: List[dict]
 
 
+# Model for person table
 class Person(SQLModel, table=True):
     __tablename__ = 'person'
 
@@ -31,6 +33,7 @@ class Person(SQLModel, table=True):
     d_update: datetime.datetime | None = None
 
 
+# Model for dx_opd table
 class DxOpd(SQLModel, table=True):
     __tablename__ = 'dx_opd'
 
@@ -43,6 +46,7 @@ class DxOpd(SQLModel, table=True):
     d_update: datetime.datetime | None = None
 
 
+# Model for dx_ipd table
 class DxIpd(SQLModel, table=True):
     __tablename__ = 'dx_ipd'
 
@@ -56,6 +60,7 @@ class DxIpd(SQLModel, table=True):
     d_update: datetime.datetime | None = None
 
 
+# Model for operation_opd table
 class OperationOpd(SQLModel, table=True):
     __tablename__ = 'operation_opd'
 
@@ -68,6 +73,7 @@ class OperationOpd(SQLModel, table=True):
     d_update: datetime.datetime | None = None
 
 
+# Model for operation_ipd table
 class OperationIpd(SQLModel, table=True):
     __tablename__ = 'operation_ipd'
 
@@ -80,6 +86,7 @@ class OperationIpd(SQLModel, table=True):
     d_update: datetime.datetime | None = None
 
 
+# Model for service table
 class Service(SQLModel, table=True):
     __tablename__ = 'service'
 
@@ -93,6 +100,7 @@ class Service(SQLModel, table=True):
     d_update: datetime.datetime | None = None
 
 
+# Model for admission table
 class Admission(SQLModel, table=True):
     __tablename__ = 'admission'
 
