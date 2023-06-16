@@ -3,12 +3,18 @@ from sqlmodel import Session, select
 from starlette.responses import RedirectResponse
 
 from db import get_session, init_db
-from model import ReceiveData, Person
+from model import ReceiveData, Person, DxOpd, DxIpd, OperationOpd, OperationIpd, Service, Admission
 
 allow_ips = ['127.0.0.1', '192.168.1.1']
 
 table_map = {
     'cmu_dent_person': 'person',
+    'cmu_dent_dx_opd': 'dx_opd',
+    'cmu_dent_dx_ipd': 'dx_ipd',
+    'cmu_dent_operation_opd': 'operation_opd',
+    'cmu_dent_operation_ipd': 'operation_ipd',
+    'cmu_dent_service': 'service',
+    'cmu_dent_admission': 'admission',
 }
 
 app = FastAPI(
@@ -17,57 +23,74 @@ app = FastAPI(
 )
 
 
-@app.on_event("startup")
+@app.on_event('startup')
 def on_startup():
     init_db()
 
 
 # Data receiver
-@app.post("/receive")
+@app.post('/receive')
 async def receive(input_obj: ReceiveData, session: Session = Depends(get_session)):
     # TODO: Check input IP address and reject unknown
 
     # Check known table name
     if input_obj.table_name not in table_map:
-        return {"message": "Error: Unknown table name"}
+        return {'message': 'Error: Unknown table name'}
 
     # Get input table name
     table_name = table_map[input_obj.table_name]
 
-    if table_name == 'person':
-        count_new = 0
-        count_update = 0
+    count_new = 0
+    count_update = 0
 
-        for data in input_obj.data:
-            new_person = Person.parse_obj(data)
+    for data in input_obj.data:
+        new_obj = Person.parse_obj(data)
 
-            # Get existed person
-            statement = select(Person).where(Person.hcode == new_person.hcode).where(Person.cid == new_person.cid)
-            old_person = session.exec(statement).one_or_none()
+        # Get existed person
+        statement = None
+        if table_name == 'person':
+            statement = select(Person).where(Person.hcode == new_obj.hcode).where(Person.cid == new_obj.cid)
+        elif table_name == 'dx_opd':
+            statement = select(DxOpd).where(DxOpd.hcode == new_obj.hcode).where(DxOpd.cid == new_obj.cid).where(
+                DxOpd.datesev == new_obj.datesev)
+        elif table_name == 'dx_ipd':
+            statement = select(DxIpd).where(DxIpd.hcode == new_obj.hcode).where(DxIpd.cid == new_obj.cid).where(
+                DxIpd.datesev == new_obj.datesev)
+        elif table_name == 'operation_opd':
+            statement = select(OperationOpd).where(OperationOpd.hcode == new_obj.hcode).where(
+                OperationOpd.cid == new_obj.cid).where(OperationOpd.datesev == new_obj.datesev)
+        elif table_name == 'operation_ipd':
+            statement = select(OperationIpd).where(OperationIpd.hcode == new_obj.hcode).where(
+                OperationIpd.cid == new_obj.cid).where(OperationIpd.datesev == new_obj.datesev)
+        elif table_name == 'service':
+            statement = select(Service).where(Service.hcode == new_obj.hcode).where(Service.cid == new_obj.cid).where(
+                Service.datesev == new_obj.datesev)
+        elif table_name == 'admission':
+            statement = select(Admission).where(Admission.hcode == new_obj.hcode).where(
+                Admission.cid == new_obj.cid).where(Admission.datesev == new_obj.datesev)
 
-            if old_person is None:
-                # Add new row
-                session.add(new_person)
-                count_new += 1
-            else:
-                # Update values
-                for key, value in {k: v for k, v in new_person.__dict__.items() if not str(k).startswith("_")}.items():
-                    setattr(old_person, key, value)
+        old_obj = session.exec(statement).one_or_none()
 
-                # Update row
-                session.add(old_person)
-                count_update += 1
+        if old_obj is None:
+            # Add new row
+            session.add(new_obj)
+            count_new += 1
+        else:
+            # Update properties
+            for key, value in {k: v for k, v in new_obj.__dict__.items() if not str(k).startswith('_')}.items():
+                setattr(old_obj, key, value)
 
-        # Commit to database, finger cross
-        session.commit()
-        return {"message": "Success: {} added, {} updated".format(count_new, count_update)}
+            # Update existed row
+            session.add(old_obj)
+            count_update += 1
 
-    # Something somewhere went horribly wrong T_T
-    return {"message": "Error: Something went wrong"}
+    # Commit to database, finger cross
+    session.commit()
+    return {'message': 'Success: {} added, {} updated'.format(count_new, count_update)}
 
 
 # Redirect root to docs
 # TODO: Remove docs in production
-@app.get("/", include_in_schema=False)
+@app.get('/', include_in_schema=False)
 async def docs_redirect():
     return RedirectResponse(url='/docs')
