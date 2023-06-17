@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Request
 from sqlmodel import Session, select
 from starlette.responses import RedirectResponse
 
@@ -33,8 +33,11 @@ def on_startup():
 
 # Data receiver
 @app.post('/receive')
-async def receive(input_obj: ReceiveData, session: Session = Depends(get_session)):
-    # TODO: Check input IP address and reject unknown
+async def receive(input_obj: ReceiveData, request: Request, session: Session = Depends(get_session)):
+    # # Check input IP address and reject unknown
+    # ip = request.client.host
+    # if ip not in allow_ips:
+    #     return {'message': 'Error: IP address not allow'}
 
     # Check known table name
     if input_obj.table_name not in table_map:
@@ -92,7 +95,15 @@ async def receive(input_obj: ReceiveData, session: Session = Depends(get_session
 
     # Commit to database, finger cross
     session.commit()
-    return {'message': 'Success: {} added, {} updated'.format(count_new, count_update)}
+    return {'message': 'Success: {count_new} added, {count_update} updated'.format(count_new=count_new,
+                                                                                   count_update=count_update)}
+
+
+# Check incoming IP address
+@app.get('/check_ip')
+async def check_ip(request: Request):
+    ip = request.client.host
+    return {'message': 'We see your IP as {ip}'.format(ip=ip)}
 
 
 # TODO: Remove docs in production
