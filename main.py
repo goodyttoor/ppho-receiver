@@ -34,6 +34,7 @@ def on_startup():
 # Data receiver
 @app.post('/receive')
 async def receive(input_obj: ReceiveData, request: Request, session: Session = Depends(get_session)):
+    # TODO: Enable IP check in production
     # # Check input IP address and reject unknown
     # ip = request.client.host
     # if ip not in allow_ips:
