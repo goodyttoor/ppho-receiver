@@ -7,7 +7,7 @@ from sqlmodel import Field, SQLModel
 
 # Base model for data receiver
 class ReceiveData(BaseModel):
-    table_name: str
+    table: str
     data: List[dict]
 
 

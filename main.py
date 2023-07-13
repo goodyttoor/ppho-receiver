@@ -10,22 +10,39 @@ from model import ReceiveData, Admission, CommunityService, Dental, DiagnosisIpd
 allow_ips = ['127.0.0.1', '192.168.1.1']
 
 # Map table name from input to database
-tables = (
-    'admission',
-    'community_service',
-    'dental',
-    'diagnosis_ipd',
-    'diagnosis_opd',
-    'oc_scfc_ipd',
-    'oc_scfc_opd',
-    'person_cid',
-    'person_db',
-    'procedure_ipd',
-    'procedure_opd',
-    'rehabilitation',
-    'service',
-    'specialpp'
-)
+table_map = {
+    'dent_api_diagnosis_ipd': 'diagnosis_ipd',
+    'dent_api_diagnosis_opd': 'diagnosis_opd',
+    'dent_api_t_person_db': 'person_db',
+    'admission': 'admission',
+    'community_service': 'community_service',
+    'dental': 'dental',
+    'oc_scfc_ipd': 'oc_scfc_ipd',
+    'oc_scfc_opd': 'oc_scfc_opd',
+    'person_cid': 'person_cid',
+    'procedure_ipd': 'procedure_ipd',
+    'procedure_opd': 'procedure_opd',
+    'rehabilitation': 'rehabilitation',
+    'service': 'service',
+    'specialpp': 'specialpp'
+}
+
+# tables = (
+#     'admission',
+#     'community_service',
+#     'dental',
+#     'diagnosis_ipd',
+#     'diagnosis_opd',
+#     'oc_scfc_ipd',
+#     'oc_scfc_opd',
+#     'person_cid',
+#     'person_db',
+#     'procedure_ipd',
+#     'procedure_opd',
+#     'rehabilitation',
+#     'service',
+#     'specialpp'
+# )
 
 # Create FastAPI instance
 app = FastAPI(
@@ -48,7 +65,7 @@ async def receive(input_obj: ReceiveData, request: Request, session: Session = D
     #     return {'message': 'Error: IP address not allow'}
 
     # Check known table name
-    if input_obj.table_name not in tables:
+    if input_obj.table not in table_map:
         return {'message': 'Error: Unknown table name'}
 
     # Counters for output message
@@ -60,7 +77,7 @@ async def receive(input_obj: ReceiveData, request: Request, session: Session = D
 
         # Check if row existed
         statement = None
-        if input_obj.table_name == 'admission':
+        if table_map[input_obj.table] == 'admission':
             new_obj = Admission.parse_obj(data)
             statement = select(Admission) \
                 .where(Admission.HOSPCODE == new_obj.HOSPCODE) \
@@ -69,7 +86,7 @@ async def receive(input_obj: ReceiveData, request: Request, session: Session = D
                 .where(Admission.AN == new_obj.AN) \
                 .where(Admission.DATETIME_ADMIT == new_obj.DATETIME_ADMIT) \
                 .where(Admission.DATETIME_DISCH == new_obj.DATETIME_DISCH)
-        elif input_obj.table_name == 'community_service':
+        elif table_map[input_obj.table] == 'community_service':
             new_obj = CommunityService.parse_obj(data)
             statement = select(CommunityService) \
                 .where(CommunityService.HOSPCODE == new_obj.HOSPCODE) \
@@ -77,14 +94,14 @@ async def receive(input_obj: ReceiveData, request: Request, session: Session = D
                 .where(CommunityService.SEQ == new_obj.SEQ) \
                 .where(CommunityService.DATE_SERV == new_obj.DATE_SERV) \
                 .where(CommunityService.COMSERVICE == new_obj.COMSERVICE)
-        elif input_obj.table_name == 'dental':
+        elif table_map[input_obj.table] == 'dental':
             new_obj = Dental.parse_obj(data)
             statement = select(Dental) \
                 .where(Dental.HOSPCODE == new_obj.HOSPCODE) \
                 .where(Dental.PID == new_obj.PID) \
                 .where(Dental.SEQ == new_obj.SEQ) \
                 .where(Dental.DATE_SERV == new_obj.DATE_SERV)
-        elif input_obj.table_name == 'diagnosis_ipd':
+        elif table_map[input_obj.table] == 'diagnosis_ipd':
             new_obj = DiagnosisIpd.parse_obj(data)
             statement = select(DiagnosisIpd) \
                 .where(DiagnosisIpd.HOSPCODE == new_obj.HOSPCODE) \
@@ -94,7 +111,7 @@ async def receive(input_obj: ReceiveData, request: Request, session: Session = D
                 .where(DiagnosisIpd.WARDDIAG == new_obj.WARDDIAG) \
                 .where(DiagnosisIpd.DIAGTYPE == new_obj.DIAGTYPE) \
                 .where(DiagnosisIpd.DIAGCODE == new_obj.DIAGCODE)
-        elif input_obj.table_name == 'diagnosis_opd':
+        elif table_map[input_obj.table] == 'diagnosis_opd':
             new_obj = DiagnosisOpd.parse_obj(data)
             statement = select(DiagnosisOpd) \
                 .where(DiagnosisOpd.HOSPCODE == new_obj.HOSPCODE) \
@@ -104,7 +121,7 @@ async def receive(input_obj: ReceiveData, request: Request, session: Session = D
                 .where(DiagnosisOpd.DIAGTYPE == new_obj.DIAGTYPE) \
                 .where(DiagnosisOpd.DIAGCODE == new_obj.DIAGCODE) \
                 .where(DiagnosisOpd.CLINIC == new_obj.CLINIC)
-        elif input_obj.table_name == 'oc_scfc_ipd':
+        elif table_map[input_obj.table] == 'oc_scfc_ipd':
             new_obj = OcScfcIpd.parse_obj(data)
             statement = select(OcScfcIpd) \
                 .where(OcScfcIpd.HOSPCODE == new_obj.HOSPCODE) \
@@ -114,7 +131,7 @@ async def receive(input_obj: ReceiveData, request: Request, session: Session = D
                 .where(OcScfcIpd.WARDDIAG == new_obj.WARDDIAG) \
                 .where(OcScfcIpd.DIAGTYPE == new_obj.DIAGTYPE) \
                 .where(OcScfcIpd.DIAGCODE == new_obj.DIAGCODE)
-        elif input_obj.table_name == 'oc_scfc_opd':
+        elif table_map[input_obj.table] == 'oc_scfc_opd':
             new_obj = OcScfcOpd.parse_obj(data)
             statement = select(OcScfcOpd) \
                 .where(OcScfcOpd.HOSPCODE == new_obj.HOSPCODE) \
@@ -124,16 +141,16 @@ async def receive(input_obj: ReceiveData, request: Request, session: Session = D
                 .where(OcScfcOpd.DIAGTYPE == new_obj.DIAGTYPE) \
                 .where(OcScfcOpd.DIAGCODE == new_obj.DIAGCODE) \
                 .where(OcScfcOpd.CLINIC == new_obj.CLINIC)
-        elif input_obj.table_name == 'person_cid':
+        elif table_map[input_obj.table] == 'person_cid':
             new_obj = PersonCid.parse_obj(data)
             statement = select(PersonCid) \
                 .where(PersonCid.person_id == new_obj.person_id)
-        elif input_obj.table_name == 'person_db':
+        elif table_map[input_obj.table] == 'person_db':
             new_obj = PersonDb.parse_obj(data)
             statement = select(PersonDb) \
                 .where(PersonDb.HOSPCODE == new_obj.HOSPCODE) \
                 .where(PersonDb.PID == new_obj.PID)
-        elif input_obj.table_name == 'procedure_ipd':
+        elif table_map[input_obj.table] == 'procedure_ipd':
             new_obj = ProcedureIpd.parse_obj(data)
             statement = select(ProcedureIpd) \
                 .where(ProcedureIpd.HOSPCODE == new_obj.HOSPCODE) \
@@ -143,7 +160,7 @@ async def receive(input_obj: ReceiveData, request: Request, session: Session = D
                 .where(ProcedureIpd.WARDSTAY == new_obj.WARDSTAY) \
                 .where(ProcedureIpd.PROCEDCODE == new_obj.PROCEDCODE) \
                 .where(ProcedureIpd.TIMESTART == new_obj.TIMESTART)
-        elif input_obj.table_name == 'procedure_opd':
+        elif table_map[input_obj.table] == 'procedure_opd':
             new_obj = ProcedureOpd.parse_obj(data)
             statement = select(ProcedureOpd) \
                 .where(ProcedureOpd.HOSPCODE == new_obj.HOSPCODE) \
@@ -152,14 +169,14 @@ async def receive(input_obj: ReceiveData, request: Request, session: Session = D
                 .where(ProcedureOpd.DATE_SERV == new_obj.DATE_SERV) \
                 .where(ProcedureOpd.CLINIC == new_obj.CLINIC) \
                 .where(ProcedureOpd.PROCEDCODE == new_obj.PROCEDCODE)
-        elif input_obj.table_name == 'rehabilitation':
+        elif table_map[input_obj.table] == 'rehabilitation':
             new_obj = Rehabilitation.parse_obj(data)
             statement = select(Rehabilitation) \
                 .where(Rehabilitation.HOSPCODE == new_obj.HOSPCODE) \
                 .where(Rehabilitation.PID == new_obj.PID) \
                 .where(Rehabilitation.DATE_SERV == new_obj.DATE_SERV) \
                 .where(Rehabilitation.REHABCODE == new_obj.REHABCODE)
-        elif input_obj.table_name == 'service':
+        elif table_map[input_obj.table] == 'service':
             new_obj = Service.parse_obj(data)
             statement = select(Service) \
                 .where(Service.HOSPCODE == new_obj.HOSPCODE) \
@@ -170,7 +187,7 @@ async def receive(input_obj: ReceiveData, request: Request, session: Session = D
                 .where(Service.TYPEIN == new_obj.TYPEIN) \
                 .where(Service.SERVPLACE == new_obj.SERVPLACE) \
                 .where(Service.TYPEOUT == new_obj.TYPEOUT)
-        elif input_obj.table_name == 'specialpp':
+        elif table_map[input_obj.table] == 'specialpp':
             new_obj = SpecialPp.parse_obj(data)
             statement = select(SpecialPp) \
                 .where(SpecialPp.HOSPCODE == new_obj.HOSPCODE) \
