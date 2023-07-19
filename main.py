@@ -1,7 +1,9 @@
+import os
+from datetime import datetime
 from typing import List
 
 import databases
-import os
+import sqlalchemy
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from pydantic import BaseModel
@@ -16,14 +18,31 @@ db_name = os.environ.get('DATABASE_NAME')
 db_user = os.environ.get('DATABASE_USER')
 db_pass = os.environ.get('DATABASE_PASS')
 
-# Create database connection
-database = databases.Database('mysql://{db_user}:{db_pass}@{db_url}:{db_port}/{db_name}'.format(
+DATABASE_URL = 'mysql://{db_user}:{db_pass}@{db_url}:{db_port}/{db_name}'.format(
     db_url=db_url,
     db_port=db_port,
     db_name=db_name,
     db_user=db_user,
     db_pass=db_pass
-))
+)
+
+# Create database connection
+database = databases.Database(DATABASE_URL)
+
+metadata = sqlalchemy.MetaData()
+
+receive_logs = sqlalchemy.Table(
+    "api_receiver_log",
+    metadata,
+    sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True),
+    sqlalchemy.Column("hcode", sqlalchemy.Integer),
+    sqlalchemy.Column("method", sqlalchemy.String),
+    sqlalchemy.Column("table_name", sqlalchemy.String),
+    sqlalchemy.Column("row_count", sqlalchemy.Integer),
+    sqlalchemy.Column("start_time", sqlalchemy.DateTime),
+    sqlalchemy.Column("end_time", sqlalchemy.DateTime),
+    sqlalchemy.Column("process_time", sqlalchemy.Float),
+)
 
 # List of allowed IP addresses
 allow_ips = ['127.0.0.1', '192.168.1.1']
@@ -59,6 +78,8 @@ async def shutdown():
 @app.post('/receive')
 async def receive(input_obj: ReceiveData, request: Request):
     try:
+        start_time = datetime.now()
+
         # Check input IP address and reject unknown
         # TODO: Activate this in production
         # ip = request.client.host
@@ -78,11 +99,20 @@ async def receive(input_obj: ReceiveData, request: Request):
         )
 
         await database.execute_many(query=query, values=input_obj.data)
+
+        # Write log
+        end_time = datetime.now()
+        process_time = round((end_time - start_time).total_seconds(), 2)
+        query = receive_logs.insert().values(hcode=input_obj.hcode, method=input_obj.method,
+                                             table_name=input_obj.table, row_count=len(input_obj.data),
+                                             start_time=start_time, end_time=end_time, process_time=process_time)
+        await database.execute(query=query)
+
         return {'message': 'Success'}
 
     except Exception as error:
         return {'message': 'Error: {error}'.format(error=error)}
-
+    
 
 # Check incoming IP address
 @app.get('/check_ip')
